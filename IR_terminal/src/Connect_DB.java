@@ -35,7 +35,6 @@ public class Connect_DB {
 			
 			// show movie info one by one
 			while(rs.next()) {
-				Map<String, Integer> movie_score = new TreeMap<String, Integer>(); // record review score
 				//movie_score = new TreeMap<String, Integer>();
 				movie_id = rs.getString("id");
 				String name = rs.getString("name");
@@ -48,10 +47,8 @@ public class Connect_DB {
 				
 				if(total_review!=0) {
 					// count review score
-					int average_score = GetMovieReviews(movie_id, name, connection, movie_score);
-					u.writeMapToFile("movie_review/"+name+".txt", movie_score);
+					GetMovieReviews(movie_id, name, connection);
 					//u.log(name+" "+average_score+" "+movie_score.size()); // show "movie_name / movie_score / review_count"
-					InsertScoreToDB(movie_id, average_score, movie_score.size(), connection);
 				}
 			}
 		} catch (ClassNotFoundException e) {
@@ -64,8 +61,7 @@ public class Connect_DB {
 	}
 	
 	/* get movie review by movie_id */
-	public static int GetMovieReviews(String movie_id, String movie_name, Connection connection, 
-			Map<String, Integer> movie_score) {
+	public static void GetMovieReviews(String movie_id, String movie_name, Connection connection) {
 		
 		int total_score = 0;
 		int average_score = 0;
@@ -74,6 +70,7 @@ public class Connect_DB {
 			String sql = "SELECT * FROM review WHERE movie_id = '" + movie_id + "'";
 			Statement stmt = connection.createStatement();
 			ResultSet rs = stmt.executeQuery(sql);
+			Map<String, Integer> movie_score = new TreeMap<String, Integer>(); // record review score
 			
 			while(rs.next()) {
 				String review_id = rs.getString("id");
@@ -87,21 +84,19 @@ public class Connect_DB {
 				String[] review_type = review_title.split("\\[|\\]");
 				
 				if(review_type.length >= 3) { // split with "[" & "]" will return 3 parts of string 
-					if(!review_type[0].contains("Re:")&&review_type[1].contains("雷")) {
-						int score = ReviewScore(review_type[1], review_title, movie_score);
+					if(!review_type[0].contains("Re:") && review_type[1].contains("雷")) {
+						int score = ReviewScore(review_type[1], review_title, movie_score, review_id);
 						total_score = total_score + score;
-						
-						u.log(review_type[1]+"\t"+review_type[2]);
 					}
-				} else {
-					u.log(review_type[0]);
 				}
 			}
 			
 			// count average movie score
 			int review_count = movie_score.size();
 			if(review_count > 0) {
-				average_score = total_score/review_count;
+				average_score = (total_score/review_count);
+				u.writeMapToFile("movie_review/"+movie_name+".txt", movie_score); // save review score as txt
+				InsertScoreToDB(movie_id, average_score, movie_score.size(), connection);
 				//u.log(movie_name+"\t total_score:"+total_score+"\t average_score:"+average_score+"\t review_count:"+review_count);
 			}
 			
@@ -111,40 +106,42 @@ public class Connect_DB {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		return average_score;
 	}
 	
 	
 	/* count review score by it's subtitle(review_type) */
-	public static int ReviewScore(String review_type, String review_title, Map<String, Integer> map) {
+	public static int ReviewScore(String review_type, String review_title, Map<String, Integer> map, String index) {
 		int score = 0;
 		
 		if(review_type.contains("好")) {
 			if(review_type.contains("大")||review_type.contains("極")||review_type.contains("超")
 					|| review_type.contains("爆")||review_type.contains("神")) {
-				map.put(review_title, 100);
+				map.put(index+review_title, 100);
 				score = 100;
-			} else if(review_type.contains("普")||review_type.contains("還")||review_type.contains("微")) {
-				map.put(review_title, 75);
-				score = 75;
+			} else if(review_type.contains("普")||review_type.contains("還")||review_type.contains("微")
+					||review_type.contains("偏")) {
+				map.put(index+review_title, 66);
+				score = 66;
+			} else { // 一般好雷
+				map.put(index+review_title, 82);
+				score = 82;
 			}
 		} else if(review_type.contains("普") && !review_type.contains("好")
 				&& !review_type.contains("負")) {
-			map.put(review_title, 50);
+			map.put(index+review_title, 50);
 			score = 50;
 		} else if(review_type.contains("負")||review_type.contains("爛")||review_type.contains("劣")) {
-			if(review_type.contains("普")||review_type.contains("微")) {
-				map.put(review_title, 25);
-				score = 25;
+			if(review_type.contains("普")||review_type.contains("微")||review_type.contains("偏")) {
+				map.put(index+review_title, 34);
+				score = 34;
 			} else if(review_type.contains("大")||review_type.contains("極")||review_type.contains("超")
 					|| review_type.contains("爆")) {
-				map.put(review_title, 0);
+				map.put(index+review_title, 0);
 				score = 0;
+			} else { // 一般負雷
+				map.put(index+review_title, 18);
+				score = 18;
 			}
-//		} else {
-//			map.put(review_title, 0);
-//			score = 0;
 		}
 		return score;
 	}
