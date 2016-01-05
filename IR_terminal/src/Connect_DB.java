@@ -155,24 +155,4 @@ public class Connect_DB {
 		Statement stmt = connection.createStatement();
 		update = stmt.execute(sql);
 	}
-	
-//	public static void deleteFromException(Statement stmt,String a) throws SQLException
-//	{
-//		boolean delete;
-//		String sql = "DELETE FROM TABLE_1 WHERE patent_id ='" + a + "'";
-//		//String sql = "DELETE FROM inventor_exception WHERE patent_id ='" + a + "'";
-//		delete = stmt.execute(sql);
-//		//System.out.println(sql);
-//	}
-//	
-//	public static String replaceLastChar(String s)
-//	{
-//		if(s.endsWith(",") || s.endsWith(".") || s.endsWith("-") || s.endsWith(")"))
-//		{
-//			s = s.substring(0, s.length()-1);
-//		}
-//		
-//		return s;
-//	}
-
 }
